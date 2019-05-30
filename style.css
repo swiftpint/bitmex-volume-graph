@@ -1,0 +1,39 @@
+body {
+  font-family: "Open Sans",arial,x-locale-body,sans-serif;
+}
+
+#chartContainer {
+  margin: 20px;
+}
+
+.canvasjs-chart-container {
+  width: 75%;
+}
+
+.PriceUp {
+  color: green;
+}
+
+.PriceDown {
+  color: red;
+}
+
+
+table, td, th {
+  /* border: 1px solid #ddd; */
+  text-align: left;
+}
+
+table {
+  border-collapse: collapse;
+  width: 50%;
+}
+
+th, td {
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:nth-child(even) {
+  background-color: #f2f2f2;
+}

@@ -1,0 +1,244 @@
+<html>
+<title>Home</title>
+<header>
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script>
+
+  window.onload = function () {
+
+  var dataPoints1 = [];
+  var dataPoints2 = [];
+  var dataPoints3 = [];
+
+  var chart = new CanvasJS.Chart("chartContainer", {
+  	zoomEnabled: true,
+  	title: {
+  		text: "Bitmex Buy and Sell Volumes"
+  	},
+  	axisX: {
+  		title: "axisX title"
+  	},
+    axisY:{
+  		suffix: "",
+  		includeZero: true,
+      title: "Volume",
+      lineThickness: 1,
+  	},
+    axisY2:
+    {
+      prefix: "$",
+  		includeZero: false,
+      title: "Price",
+      lineThickness: 1,
+  	},
+  	toolTip: {
+  		shared: true
+  	},
+  	legend: {
+  		cursor:"pointer",
+  		verticalAlign: "top",
+  		fontSize: 22,
+  		fontColor: "dimGrey",
+  		itemclick : toggleDataSeries
+  	},
+  	data: [{
+        axisYIndex: 0,
+    		type: "line",
+    		xValueType: "dateTime",
+    		yValueFormatString: "####.00",
+    		xValueFormatString: "hh:mm:ss TT",
+    		showInLegend: true,
+    		name: "Sells",
+    		dataPoints: dataPoints2,
+        color: "red",
+        markerSize: 1,
+      },
+      {
+        axisYIndex: 1,
+    		type: "line",
+    		xValueType: "dateTime",
+    		yValueFormatString: "####.00",
+    		xValueFormatString: "hh:mm:ss TT",
+    		showInLegend: true,
+    		name: "Buy",
+    		dataPoints: dataPoints3,
+        color: "green",
+        markerSize: 1,
+      },
+    {
+      axisYType: "secondary",
+      type: "line",
+      xValueType: "dateTime",
+      yValueFormatString: "$####.00",
+      xValueFormatString: "hh:mm:ss TT",
+      showInLegend: true,
+      name: "Price",
+      dataPoints: dataPoints1,
+      color: "blue",
+      markerSize: 1,
+    }]
+  });
+
+  function toggleDataSeries(e) {
+  	if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+  		e.dataSeries.visible = false;
+  	}
+  	else {
+  		e.dataSeries.visible = true;
+  	}
+  	chart.render();
+  }
+
+var recentTrades = []
+
+var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
+  WS.onopen = function(){
+    console.log("websocket opened");
+  }
+var prices = []
+
+
+  WS.onmessage = function (evt) {
+      var e = document.getElementById("timeFrame");
+      var timeFrame = e.options[e.selectedIndex].value * 60000;
+      console.log(timeFrame);
+      var msg = JSON.parse(evt.data);
+      if (msg.table === "trade"){
+        var date = new Date(msg.data[0].timestamp)
+        var price = msg.data[msg.data.length -1].price;
+        var oldPrice = document.getElementById("price").innerHTML;
+        document.getElementById("price").innerHTML = price.toLocaleString();
+        if (price > oldPrice){
+          document.getElementById("price").classList.remove('PriceDown');
+          document.getElementById("price").classList.add('PriceUp');
+        }
+        if (price < oldPrice){
+          document.getElementById("price").classList.remove('PriceUp');
+          document.getElementById("price").classList.add('PriceDown');
+        }
+        var dataPoint1 = {
+          y: price,
+          x: date
+        }
+        dataPoints1.push(dataPoint1);
+  	    chart.render();
+        msg.data.forEach(function(data){
+          recentTrades.push(data);
+        })
+        var totalBuys = 0;
+        var totalSells = 0;
+
+        for (var i = 0; i < recentTrades.length; i++){
+          var timeNow = new Date(recentTrades[recentTrades.length-1].timestamp)
+          if ((new Date(recentTrades[i].timestamp) - timeNow) < -timeFrame) {
+            recentTrades.shift();
+          } else {
+            break;
+          }
+        }
+
+        recentTrades.forEach(function(data){
+          // Get a reference to the table
+          let tableRef = document.getElementById('recentTrades');
+
+          // Insert a row at the beginning of the table
+          let newRow = tableRef.insertRow(1);
+
+          // Insert a cell in the row at index 0
+          let newDateCell = newRow.insertCell(0);
+          let newVolumeCell = newRow.insertCell(1);
+          let newPriceCell = newRow.insertCell(2);
+
+          // Append a text node to the cell
+          let newDateText = document.createTextNode(data.timestamp.toLocaleString());
+          let newPriceText = document.createTextNode(data.price.toLocaleString());
+          let newVolumeText = document.createTextNode(data.size.toLocaleString());
+
+          // Update Cells
+          newDateCell.appendChild(newDateText);
+          newPriceCell.appendChild(newPriceText);
+
+          if (data.side === 'Buy'){
+            newPriceCell.className = 'PriceUp'
+            totalBuys += data.size;
+          } else {
+            newPriceCell.className = 'PriceDown'
+            totalSells += data.size;
+          }
+
+          newVolumeCell.appendChild(newVolumeText);
+
+          var rows = document.getElementById("recentTrades").getElementsByTagName("tr").length;
+          if (rows > 10){
+            tableRef.deleteRow(-1);
+          }
+      });
+
+      document.getElementById("sumBuy").innerHTML = totalBuys.toLocaleString();;
+      document.getElementById("sumSell").innerHTML = totalSells.toLocaleString();;
+
+      var dataPoint3 = {
+        y: totalBuys,
+        x: date
+      }
+      var dataPoint2 = {
+        y: totalSells,
+        x: date
+      }
+
+      dataPoints2.push(dataPoint2);
+      dataPoints3.push(dataPoint3);
+      console.log(recentTrades.length);
+      if (recentTrades.length > 1000){
+          dataPoints1.shift();
+          dataPoints2.shift();
+          dataPoints3.shift();
+      }
+    };
+  // function calcLag(){
+  // }
+}
+}
+</script>
+
+</header>
+<body>
+
+  <span>
+    Timeframe:
+    <select id="timeFrame">
+      <option value="1" selected="selected">1m</option>
+      <option value="5">5m</option>
+      <option value="15">15m</option>
+      <option value="30">30m</option>
+      <option value="60">1h</option>
+    </select>
+
+    Show records:
+    <input ref="records" type="number" placeholder="Graph timeframe"/>
+  </span>
+
+
+<div id="chartContainer" style="height: 300px; width: 100%;"></div>
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+
+<table>
+  <tr>
+    <th>
+      <p>Buy: <span id="sumBuy"></span></p>
+      <p>Sell: <span id="sumSell"></span></p>
+    </th>
+  </tr>
+</table>
+
+<table id="recentTrades">
+  <tr>
+    <th>Timstamp</th>
+    <th>Volume</th>
+    <th>Price: <span class="" id="price"></span></th>
+  </tr>
+
+</body>
+
+</html>
