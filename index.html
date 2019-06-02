@@ -112,20 +112,20 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
         var direction = msg.data[msg.data.length -1].tickDirection;
         // var oldPrice = document.getElementById("price").innerHTML;
         
-        document.getElementById("price").innerHTML = price.toLocaleString();
-        if (direction === "ZeroPlusTick" || direction === "PlusTick"){
-          document.getElementById("price").classList.remove('PriceDown');
-          document.getElementById("price").classList.add('PriceUp');
-        }
-        if (direction === "ZeroMinusTick" || direction === "MinusTick"){
-          document.getElementById("price").classList.remove('PriceUp');
-          document.getElementById("price").classList.add('PriceDown');
-        }
-        var dataPoint1 = {
-          y: price,
-          x: date
-        }
-        dataPoints1.push(dataPoint1);
+        // document.getElementById("price").innerHTML = price.toLocaleString();
+        // if (direction === "ZeroPlusTick" || direction === "PlusTick"){
+        //   document.getElementById("price").classList.remove('PriceDown');
+        //   document.getElementById("price").classList.add('PriceUp');
+        // }
+        // if (direction === "ZeroMinusTick" || direction === "MinusTick"){
+        //   document.getElementById("price").classList.remove('PriceUp');
+        //   document.getElementById("price").classList.add('PriceDown');
+        // }
+        // var dataPoint1 = {
+        //   y: price,
+        //   x: date
+        // }
+        // dataPoints1.push(dataPoint1);
         
   	    // ADD NEW TRADE TO RECENT TRADES ARRAY
         msg.data.forEach(function(data){
@@ -134,19 +134,31 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
           // Check if it meets the criteria for adding to Table     
           
           // TO DO: - Calc time elapsed since last one added
-          //        - Greater than, less than
           //        - Add tooltip to CSS.
           
           if (tableFilter === "All" || tableFilter === ""){
             tableData.push(data)
-
+            // if (tableData.length > 0){
+            //   var oldTime = tableData[tableData.length -1].timestamp
+            // } else oldTime = new Date(data.timestamp);
           } else if (tableFilter.charAt(0) === "=") {
             if (data.size == tableFilter.slice(1)) {
+
+              // console.log(oldTime - new Date(data.timestamp));
               tableData.push(data)    
             }
-          }             
+          } else if (tableFilter.charAt(0) === ">") {
+              if (data.size > tableFilter.slice(1)) {
+                tableData.push(data)    
+              }
+          } else if (tableFilter.charAt(0) === "<") {
+            if (data.size < tableFilter.slice(1)) {
+              tableData.push(data)    
+            }
+          }   
+        
           if (tableData.length > 10){
-            console.log("length over 10")
+            // console.log("length over 10")
             // tableData = tableData.slice(-10);
             tableData.shift();
           }
@@ -158,7 +170,7 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
           var timeNow = new Date(recentTrades[recentTrades.length-1].timestamp)
           if ((new Date(recentTrades[i].timestamp) - timeNow) < -timeFrame) {
             recentTrades.shift();
-            console.log("delete trade");
+            // console.log("delete trade");
           } else {
             break;
           }
@@ -174,7 +186,9 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
           } else {
             totalSells += data.size;
           }
-        })        
+        })    
+        
+        chart.render();
         
         // UPDATE HTML WITH TOTAL BUYS AND SELLS
         document.getElementById("sumBuy").innerHTML = totalBuys.toLocaleString();;
@@ -201,25 +215,26 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
 
           // Insert a cell in the row at index 0
           let newDateCell = newRow.insertCell(0);
-          let BuySellCell = newRow.insertCell(1);          
+          let newSideCell = newRow.insertCell(1);          
           let newVolumeCell = newRow.insertCell(2);
           let newPriceCell = newRow.insertCell(3);
 
           // Append a text node to the cell
-          let newDateText = document.createTextNode(data.timestamp.toLocaleString());
-          let buySelleText = document.createTextNode(data.side.toLocaleString());
+          let newDateText = document.createTextNode(data.timestamp.toLocaleString().slice(11,23));
+          let newSideText = document.createTextNode(data.side.toLocaleString());
           let newPriceText = document.createTextNode(data.price.toLocaleString());
           let newVolumeText = document.createTextNode(data.size.toLocaleString());
 
           // Update Cells
           newDateCell.appendChild(newDateText);
+          newSideCell.appendChild(newSideText);
           newPriceCell.appendChild(newPriceText);
 
           if (data.side === 'Buy'){
-            newPriceCell.className = 'PriceUp'
+            newSideCell.className = 'PriceUp'
             // totalBuys += data.size;
           } else {
-            newPriceCell.className = 'PriceDown'
+            newSideCell.className = 'PriceDown'
             // totalSells += data.size;
           }
 
@@ -230,6 +245,22 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
 
 
       });
+
+        
+      document.getElementById("price").innerHTML = price.toLocaleString();
+      if (direction === "ZeroPlusTick" || direction === "PlusTick"){
+        document.getElementById("price").classList.remove('PriceDown');
+        document.getElementById("price").classList.add('PriceUp');
+      }
+      if (direction === "ZeroMinusTick" || direction === "MinusTick"){
+        document.getElementById("price").classList.remove('PriceUp');
+        document.getElementById("price").classList.add('PriceDown');
+      }
+      var dataPoint1 = {
+        y: price,
+        x: date
+      }
+      dataPoints1.push(dataPoint1);
 
       var dataPoint3 = {
         y: totalBuys,
@@ -245,15 +276,17 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
       // console.log(recentTrades.length);
       // Should this be length of dataPoints1? 
       if (dataPoints1.length > 1000){
+          // console.log("remove from graph arrays")
           dataPoints1.shift();
           dataPoints2.shift();
           dataPoints3.shift();
       }
       // MOVE ???
-  	  chart.render();
+      
     };
   }
 }
+
 </script>
 
 </header>
@@ -277,26 +310,34 @@ var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
 <div id="chartContainer" style="height: 300px; width: 100%;"></div>
 <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 
-<table>
-  <tr>
-    <th>
-      <p>Buy: <span id="sumBuy"></span></p>
-      <p>Sell: <span id="sumSell"></span></p>
-    </th>
-  </tr>
-</table>
-<span>    
-  Filter: 
-  <input id="tableFilter" type="string" value="=10000"/>
-</span>
+<div class="feed">
+    <div class="header">
+       <h3>Bimex</h3>
+    </div> 
+  <div class="config">
+    <div class="filter">
+        <span>Filter (use =, <, >)</span>
+        <input id="tableFilter" type="string" value="=10000"/>
+    </div>  
+    <div class="totals">
+      <h3>Buy: <span id="sumBuy"></span></h3>
+      <h3>Sell: <span id="sumSell"></span></h3>
+    </div>
+    <div class="records">
+      Show records: 
+      <input id="tableRecords" type="string" value="10"/>
+    </div>
+  </div>
 
-<table id="recentTrades">
-  <tr>
-    <th>Timstamp</th>
-    <th>Buy/Sell</th>
-    <th>Volume</th>
-    <th>Price: <span class="" id="price"></span></th>
-  </tr>
+  <table class="trades" id="recentTrades">
+    <tr>
+      <th class="timestamp">Timstamp</th>
+      <th class="side">Buy/Sell</th>
+      <th class="size">Volume</th>
+      <th class="price">Price: <span class="" id="price"></span></th>
+    </tr>
+  </table>
+</div>
 
 </body>
 

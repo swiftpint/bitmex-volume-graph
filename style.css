@@ -18,24 +18,12 @@ body {
   color: red;
 }
 
-
-table, td, th {
-  /* border: 1px solid #ddd; */
-  text-align: left;
-}
-
-table {
-  border-collapse: collapse;
-  width: 50%;
-}
-
-th, td {
-  padding: 5px;
-  border-bottom: 1px solid #ddd;
-}
-
-tr:nth-child(even) {
-  background-color: #f2f2f2;
+div.feed {
+  margin: 10px;
+  height: 600px;
+  width: 520px;
+  overflow: auto;
+  background: rgba(114, 114, 114, 0.10);
 }
 
 .tooltip {
@@ -61,3 +49,109 @@ tr:nth-child(even) {
 .tooltip:hover .tooltiptext {
   visibility: visible;
 }
+
+
+div.feed {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap; 
+  flex-direction: column;
+  margin: 10px;
+  height: 600px;
+  width: 420px;
+  overflow: auto;
+  background: rgba(114, 114, 114, 0.10);
+}
+
+div.feed div.header {
+  height: 2em;
+  display: flex;
+  width: 100%;
+}
+
+div.feed div.header h3 {
+  text-align: center;
+  width: 100%;
+}
+
+div.feed div.config {
+  /*height: 3em;*/
+  /*display: flex;*/
+  width: 100%;
+}
+
+div.feed div.config div.filter {
+  float:left;
+  width:100px;
+  /*width: 20%;*/
+}
+
+div.feed div.config div.filter input {
+  width:75%;
+}
+
+div.feed div.config div.totals {
+  display: inline-block;
+  margin:0 auto;
+}
+
+div.feed div.config div.records {
+  /*width: 20%;*/
+  float:right;
+  width:100px;
+}
+
+div.feed div.config div.records input {
+  width:75%;
+}
+
+
+
+table.trades {
+  width: 95%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+table.trades th.timestamp {
+  width: 45%;
+}
+
+table.trades th.side {
+  width: 5%;
+}
+
+table.trades th.size {
+  width: 25%;
+}
+
+table.trades th.price {
+  width: 25%;
+}
+
+table.trades tr:nth-child(odd) {
+  background: rgba(195,195,195,0.25);
+}
+
+table.trades tr:nth-child(even) {
+  background: #fff;
+}
+
+table.trades tr > * {
+  border: 1.5px solid #bfbfbf;
+}
+
+table.trades td.side {
+  text-align: center;
+  font-weight: bold;
+}
+
+table.trades td.side.buy {
+  background-color: #8ae07a;
+}
+
+table.trades td.side.sell {
+  background-color: #e07a7a;
+}
+
+
