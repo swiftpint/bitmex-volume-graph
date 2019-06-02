@@ -17,7 +17,7 @@
   		text: "Bitmex Buy and Sell Volumes"
   	},
   	axisX: {
-  		title: "axisX title"
+  		title: "Time"
   	},
     axisY:{
   		suffix: "",
@@ -90,30 +90,34 @@
   	chart.render();
   }
 
-var recentTrades = []
+var recentTrades = [];
+let tableData = [];
 
 var WS = new WebSocket("wss://www.bitmex.com/realtime?subscribe=trade:XBTUSD");
   WS.onopen = function(){
     console.log("websocket opened");
   }
-var prices = []
-
 
   WS.onmessage = function (evt) {
-      var e = document.getElementById("timeFrame");
-      var timeFrame = e.options[e.selectedIndex].value * 60000;
-      console.log(timeFrame);
+    
+      var timeFrame = document.getElementById("timeFrame").value * 60000;
+      var graphLength = document.getElementById("graphLength").value * 60000;
+      var tableFilter = document.getElementById("tableFilter").value;
+    
       var msg = JSON.parse(evt.data);
       if (msg.table === "trade"){
+        // console.log(msg)
         var date = new Date(msg.data[0].timestamp)
         var price = msg.data[msg.data.length -1].price;
-        var oldPrice = document.getElementById("price").innerHTML;
+        var direction = msg.data[msg.data.length -1].tickDirection;
+        // var oldPrice = document.getElementById("price").innerHTML;
+        
         document.getElementById("price").innerHTML = price.toLocaleString();
-        if (price > oldPrice){
+        if (direction === "ZeroPlusTick" || direction === "PlusTick"){
           document.getElementById("price").classList.remove('PriceDown');
           document.getElementById("price").classList.add('PriceUp');
         }
-        if (price < oldPrice){
+        if (direction === "ZeroMinusTick" || direction === "MinusTick"){
           document.getElementById("price").classList.remove('PriceUp');
           document.getElementById("price").classList.add('PriceDown');
         }
@@ -122,36 +126,88 @@ var prices = []
           x: date
         }
         dataPoints1.push(dataPoint1);
-  	    chart.render();
+        
+  	    // ADD NEW TRADE TO RECENT TRADES ARRAY
         msg.data.forEach(function(data){
           recentTrades.push(data);
-        })
-        var totalBuys = 0;
-        var totalSells = 0;
+          
+          // Check if it meets the criteria for adding to Table     
+          
+          // TO DO: - Calc time elapsed since last one added
+          //        - Greater than, less than
+          //        - Add tooltip to CSS.
+          
+          if (tableFilter === "All" || tableFilter === ""){
+            tableData.push(data)
 
+          } else if (tableFilter.charAt(0) === "=") {
+            if (data.size == tableFilter.slice(1)) {
+              tableData.push(data)    
+            }
+          }             
+          if (tableData.length > 10){
+            console.log("length over 10")
+            // tableData = tableData.slice(-10);
+            tableData.shift();
+          }
+        })
+
+
+        // REMOVE TRADES FROM ARRAY IF TOO OLD
         for (var i = 0; i < recentTrades.length; i++){
           var timeNow = new Date(recentTrades[recentTrades.length-1].timestamp)
           if ((new Date(recentTrades[i].timestamp) - timeNow) < -timeFrame) {
             recentTrades.shift();
+            console.log("delete trade");
           } else {
             break;
           }
         }
 
+        // CALCULATE TOTAL BUYS AND SELLS FROM ARRAY OF RECENT TRADES
+        var totalBuys = 0;
+        var totalSells = 0;
+      
         recentTrades.forEach(function(data){
-          // Get a reference to the table
-          let tableRef = document.getElementById('recentTrades');
+          if (data.side === 'Buy'){
+            totalBuys += data.size;
+          } else {
+            totalSells += data.size;
+          }
+        })        
+        
+        // UPDATE HTML WITH TOTAL BUYS AND SELLS
+        document.getElementById("sumBuy").innerHTML = totalBuys.toLocaleString();;
+        document.getElementById("sumSell").innerHTML = totalSells.toLocaleString();;
+
+
+        // UPDATE TABLE
+
+        // Clear Table
+        let tableRef = document.getElementById('recentTrades');
+
+          for(var i = tableRef.rows.length - 1; i > 0; i--)
+          {
+              tableRef.deleteRow(i);
+          }
+
+        // Add rows
+        tableData.forEach(function(data){
+          // Get a reference from the table
+
 
           // Insert a row at the beginning of the table
           let newRow = tableRef.insertRow(1);
 
           // Insert a cell in the row at index 0
           let newDateCell = newRow.insertCell(0);
-          let newVolumeCell = newRow.insertCell(1);
-          let newPriceCell = newRow.insertCell(2);
+          let BuySellCell = newRow.insertCell(1);          
+          let newVolumeCell = newRow.insertCell(2);
+          let newPriceCell = newRow.insertCell(3);
 
           // Append a text node to the cell
           let newDateText = document.createTextNode(data.timestamp.toLocaleString());
+          let buySelleText = document.createTextNode(data.side.toLocaleString());
           let newPriceText = document.createTextNode(data.price.toLocaleString());
           let newVolumeText = document.createTextNode(data.size.toLocaleString());
 
@@ -161,22 +217,19 @@ var prices = []
 
           if (data.side === 'Buy'){
             newPriceCell.className = 'PriceUp'
-            totalBuys += data.size;
+            // totalBuys += data.size;
           } else {
             newPriceCell.className = 'PriceDown'
-            totalSells += data.size;
+            // totalSells += data.size;
           }
 
           newVolumeCell.appendChild(newVolumeText);
 
-          var rows = document.getElementById("recentTrades").getElementsByTagName("tr").length;
-          if (rows > 10){
-            tableRef.deleteRow(-1);
-          }
-      });
+          // 
+          // var rows = document.getElementById("recentTrades").getElementsByTagName("tr").length;
 
-      document.getElementById("sumBuy").innerHTML = totalBuys.toLocaleString();;
-      document.getElementById("sumSell").innerHTML = totalSells.toLocaleString();;
+
+      });
 
       var dataPoint3 = {
         y: totalBuys,
@@ -189,16 +242,17 @@ var prices = []
 
       dataPoints2.push(dataPoint2);
       dataPoints3.push(dataPoint3);
-      console.log(recentTrades.length);
-      if (recentTrades.length > 1000){
+      // console.log(recentTrades.length);
+      // Should this be length of dataPoints1? 
+      if (dataPoints1.length > 1000){
           dataPoints1.shift();
           dataPoints2.shift();
           dataPoints3.shift();
       }
+      // MOVE ???
+  	  chart.render();
     };
-  // function calcLag(){
-  // }
-}
+  }
 }
 </script>
 
@@ -215,8 +269,8 @@ var prices = []
       <option value="60">1h</option>
     </select>
 
-    Show records:
-    <input ref="records" type="number" placeholder="Graph timeframe"/>
+    Display time (minutes):
+    <input id="graphLength" type="number" value="1"/>
   </span>
 
 
@@ -231,10 +285,15 @@ var prices = []
     </th>
   </tr>
 </table>
+<span>    
+  Filter: 
+  <input id="tableFilter" type="string" value="=10000"/>
+</span>
 
 <table id="recentTrades">
   <tr>
     <th>Timstamp</th>
+    <th>Buy/Sell</th>
     <th>Volume</th>
     <th>Price: <span class="" id="price"></span></th>
   </tr>
